@@ -1,1 +1,45 @@
-<h1>Welcome to the CHAT SIDE {{session.username}}</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Support Chat</title>
+</head>
+
+<body>
+
+    <h1>AI Customer Support</h1>
+
+    <form action="/chat" method="POST">
+
+        <label for="message">Your message:</label>
+        <br>
+
+        <textarea
+            id="message"
+            name="message"
+            rows="5"
+            cols="50"
+            placeholder="How can we help you?"
+            required
+        ></textarea>
+
+        <br><br>
+
+        <button type="submit">Send</button>
+
+    </form>
+
+
+    {% if response %}
+
+        <hr>
+
+        <h3>AI Support</h3>
+
+        <p>{{ response }}</p>
+
+    {% endif %}
+
+</body>
+</html>

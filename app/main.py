@@ -1,6 +1,8 @@
 from flask import Flask, render_template,request,session,redirect
 import sqlite3
 from werkzeug.security import generate_password_hash,check_password_hash
+from agent.ollama_client import chat_ollama
+from caching.cache import cache_response,get_cached_response
 
 app = Flask(__name__)
 app.secret_key = "your-secret-key"
@@ -50,11 +52,22 @@ def login():
         return "Invalid username or password"
     return render_template("auth/login.html")
     
-@app.route("/chat")
-def chat():
+
+@app.route("/chat", methods=["GET", "POST"])
+def chat_page():
     if "user_id" not in session:
         return redirect("/login")
-    return render_template("chat.html")    
+    response = None
+    if request.method == "POST":
+        message = request.form["message"]
+        response = get_cached_response(message)
+        if response is None:
+            print("cache miss")
+            response = chat_ollama(message)
+            cache_response(message,response)
+        else:
+            print('cache hit')
+    return render_template("chat.html", response=response)
 
 if __name__ == "__main__":
     app.run(debug=True)
