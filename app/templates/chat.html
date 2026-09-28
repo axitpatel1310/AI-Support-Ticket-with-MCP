@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Customer Support Chat</title>
 </head>
 
@@ -10,9 +12,40 @@
 
     <h1>AI Customer Support</h1>
 
-    <form action="/chat" method="POST">
+
+    <!-- OLD CONVERSATION -->
+
+    <h2>Conversation</h2>
+
+    {% for message in messages %}
+
+        {% if message["role"] == "user" %}
+
+            <div>
+                <strong>You:</strong>
+                <p>{{ message["content"] }}</p>
+            </div>
+
+        {% else %}
+
+            <div>
+                <strong>AI Support:</strong>
+                <p>{{ message["content"] }}</p>
+            </div>
+
+        {% endif %}
+
+        <hr>
+
+    {% endfor %}
+
+
+    <!-- SEND NEW MESSAGE -->
+
+    <form action="/chat/{{ conversation_id }}" method="POST">
 
         <label for="message">Your message:</label>
+
         <br>
 
         <textarea
@@ -26,20 +59,12 @@
 
         <br><br>
 
-        <button type="submit">Send</button>
+        <button type="submit">
+            Send
+        </button>
 
     </form>
 
-
-    {% if response %}
-
-        <hr>
-
-        <h3>AI Support</h3>
-
-        <p>{{ response }}</p>
-
-    {% endif %}
-
 </body>
+
 </html>

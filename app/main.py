@@ -1,21 +1,23 @@
-from flask import Flask, render_template,request,session,redirect
+from flask import Flask, render_template,request,session,redirect,url_for
 import sqlite3
 from werkzeug.security import generate_password_hash,check_password_hash
 from agent.ollama_client import chat_ollama
 from caching.cache import cache_response,get_cached_response
+from caching.save_conv import save_message, create_conversation
 
 app = Flask(__name__)
 app.secret_key = "your-secret-key"
 
 @app.route("/")
 def home():
-    return render_template("index.html")
+    conn = sqlite3.connect("db.sqlite")
+    conversations = conn.execute("select * from conversations").fetchall()
+    conn.close()
+    return render_template("index.html",conversations=conversations)
 
 @app.route("/dashboard")
 def dashboard():
-    username = "Axit"
-    ticket = 5
-    return render_template("teams/dashboard.html",username= username,ticket= ticket)
+    return render_template("teams/dashboard.html")
 
 @app.route("/register", methods=["GET","POST"])
 def register():
@@ -52,22 +54,91 @@ def login():
         return "Invalid username or password"
     return render_template("auth/login.html")
     
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
 
-@app.route("/chat", methods=["GET", "POST"])
-def chat_page():
+@app.route("/chat/<int:conversation_id>", methods=["GET", "POST"])
+def chat_page(conversation_id):
+
     if "user_id" not in session:
         return redirect("/login")
-    response = None
+
+    conn = sqlite3.connect("db.sqlite")
+    conn.row_factory = sqlite3.Row
+
+    # Make sure this conversation belongs to logged-in user
+    conversation = conn.execute(
+        """
+        SELECT *
+        FROM conversations
+        WHERE id = ? AND user_id = ?
+        """,
+        (conversation_id, session["user_id"])
+    ).fetchone()
+
+    if not conversation:
+        conn.close()
+        return "Conversation not found", 404
+
     if request.method == "POST":
+
         message = request.form["message"]
-        response = get_cached_response(message)
-        if response is None:
-            print("cache miss")
-            response = chat_ollama(message)
-            cache_response(message,response)
-        else:
-            print('cache hit')
-    return render_template("chat.html", response=response)
+
+        # Save user's message
+        conn.execute(
+            """
+            INSERT INTO messages (conversation_id, role, content)
+            VALUES (?, ?, ?)
+            """,
+            (conversation_id, "user", message)
+        )
+
+        conn.commit()
+
+        # Ask Ollama
+        response = chat_ollama(message)
+
+        # Save AI response
+        conn.execute(
+            """
+            INSERT INTO messages (conversation_id, role, content)
+            VALUES (?, ?, ?)
+            """,
+            (conversation_id, "assistant", response)
+        )
+
+        # Update last activity
+        conn.execute(
+            """
+            UPDATE conversations
+            SET last_activity = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (conversation_id,)
+        )
+
+        conn.commit()
+
+    # Load entire conversation
+    messages = conn.execute(
+        """
+        SELECT *
+        FROM messages
+        WHERE conversation_id = ?
+        ORDER BY created_at ASC
+        """,
+        (conversation_id,)
+    ).fetchall()
+
+    conn.close()
+
+    return render_template(
+        "chat.html",
+        messages=messages,
+        conversation_id=conversation_id
+    )
 
 if __name__ == "__main__":
     app.run(debug=True)

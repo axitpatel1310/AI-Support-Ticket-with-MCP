@@ -2,4 +2,12 @@
 
 <a href="/register">Register</a>
 <a href="/login">Login</a>
+<a href="/logout">Logout</a>
 <a href="/chat">Chat</a>
+
+{% for conversation in conversations %}
+    <a href="/chat/{{ conversation[0] }}">
+        {{ conversation[1] }}
+    </a>
+    <br>
+{% endfor %}
