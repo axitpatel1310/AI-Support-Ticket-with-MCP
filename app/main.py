@@ -59,6 +59,23 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
+@app.route('/chat/')
+def new_chat():
+    if "user_id" not in session:
+        return redirect("/login")
+    conn = sqlite3.connect("db.sqlite")
+    cursor = conn.execute(
+        """
+        INSERT INTO conversations (user_id)
+        VALUES (?)
+        """,
+        (session["user_id"],)
+    )
+    conversation_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return redirect(f"/chat/{conversation_id}")
+
 @app.route("/chat/<int:conversation_id>", methods=["GET", "POST"])
 def chat_page(conversation_id):
     if "user_id" not in session:
