@@ -1,0 +1,5 @@
+warranty_number,customer_name,product,status
+WAR001,John,Laptop,active
+WAR002,Sarah,Monitor,expired
+WAR003,David,Keyboard,active
+WAR004,Emma,Laptop,completed

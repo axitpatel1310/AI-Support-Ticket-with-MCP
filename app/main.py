@@ -61,14 +61,10 @@ def logout():
 
 @app.route("/chat/<int:conversation_id>", methods=["GET", "POST"])
 def chat_page(conversation_id):
-
     if "user_id" not in session:
         return redirect("/login")
-
     conn = sqlite3.connect("db.sqlite")
     conn.row_factory = sqlite3.Row
-
-    # Make sure this conversation belongs to logged-in user
     conversation = conn.execute(
         """
         SELECT *
@@ -83,10 +79,7 @@ def chat_page(conversation_id):
         return "Conversation not found", 404
 
     if request.method == "POST":
-
         message = request.form["message"]
-
-        # Save user's message
         conn.execute(
             """
             INSERT INTO messages (conversation_id, role, content)
@@ -94,13 +87,8 @@ def chat_page(conversation_id):
             """,
             (conversation_id, "user", message)
         )
-
         conn.commit()
-
-        # Ask Ollama
         response = chat_ollama(message)
-
-        # Save AI response
         conn.execute(
             """
             INSERT INTO messages (conversation_id, role, content)
@@ -108,8 +96,6 @@ def chat_page(conversation_id):
             """,
             (conversation_id, "assistant", response)
         )
-
-        # Update last activity
         conn.execute(
             """
             UPDATE conversations
@@ -118,10 +104,7 @@ def chat_page(conversation_id):
             """,
             (conversation_id,)
         )
-
         conn.commit()
-
-    # Load entire conversation
     messages = conn.execute(
         """
         SELECT *
@@ -131,9 +114,7 @@ def chat_page(conversation_id):
         """,
         (conversation_id,)
     ).fetchall()
-
     conn.close()
-
     return render_template(
         "chat.html",
         messages=messages,
